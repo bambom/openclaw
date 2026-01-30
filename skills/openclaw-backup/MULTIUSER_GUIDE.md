@@ -1,204 +1,317 @@
-# OpenClaw Backup Skill - 多用户独立版本
+# OpenClaw Backup - 详细配置指南
 
-每个用户在自己的 oneyoemo 目录下创建独立的备份脚本，避免互相干扰。
+## 团队协作说明
 
-## 为什么需要独立脚本？
+oneyoemo 是团队公共仓库，每个成员有独立的工作区！
 
-1. **路径不同**：每个用户的 oneyoemo 工作区路径不同
-2. **独立配置**：各自配置自己的备份目录
-3. **避免冲突**：不会因为一个人修改影响其他人
-4. **灵活部署**：每个人可以选择自己的存储位置
+完整协作规则请查看：[README.md](../../../README.md)
 
-## 快速开始（三步搞定）
+### 仓库结构
 
-### 第一步：选择你的用户身份
-
-| 用户 | 常见oneyoemo路径 | 说明 |
-|------|----------------|------|
-| **大师兄**（李剑辛） | `E:\Workspace\oneyoemo\` | 默认配置，无需修改 |
-| **师傅** | `E:\Workspace\oneyoemo\` | 可能在D盘、E盘等 |
-| **小师妹** | `C:\oneyoemo\` | 可能在C盘根目录 |
-
-### 第二步：复制模板脚本到你的oneyoemo目录
-
-在你的 oneyemo 目录下创建备份脚本文件夹：
-
-```powershell
-# 大师兄（默认位置，可跳过）
-# 备份脚本已经存在于：E:\Workspace\oneyoemo\backup-scripts\
-
-# 师傅（假设在 E:\Workspace\oneyoemo）
-mkdir E:\Workspace\oneyoemo\backup-scripts
-# 然后复制下面的模板脚本到这个目录
-
-# 小师妹（假设在 C:\oneyoemo）
-mkdir C:\oneyoemo\backup-scripts
-# 然后复制下面的模板脚本到这个目录
+```
+oneyoemo/                          # 公共仓库
+├── README.md                         # 团队协作指南
+├── docs/                            # 共享文档
+│   ├── MEETINGS.md                 # 会议记录
+│   ├── OPERATIONS.md               # 运营计划
+│   ├── PROJECT_PLAN.md             # 项目规划
+│   └── TASK_SCHEDULE.md            # 任务计划
+├── skills/openclaw-backup/          # OpenClaw 备份工具
+└── dashixiong-workspace/             # 大师兄的工作区
+    ├── (项目文件)
+    ├── (运营素材)
+    ├── (工具脚本)
+    └── openclaw-backup/          # 大师兄的备份
 ```
 
-### 第三步：编辑脚本配置
+### 工作区说明
 
-打开你刚复制的 `backup-openclaw.ps1`，修改第 3-6 行：
+每个成员的工作区可以包含：
+- 项目相关文件
+- 开发代码
+- 素材资源
+- 文档和笔记
+- 工具和脚本
+- **openclaw-backup/** - OpenClaw 完整备份目录**
+
+## 配置流程
+
+### 第一步：复制备份脚本模板到oneyoemo公共目录
+
+在本地克隆的 oneyomo 目录下创建备份脚本文件夹：
+
+```powershell
+# 在 oneyomo 根目录下
+mkdir backup-scripts 2>$null
+
+# 复制技能中的模板脚本到这个目录
+# (需要从 skills/openclaw-backup/ 复制 backup-template.ps1 并改名为 backup-openclaw.ps1)
+```
+
+### 第二步：编辑你的备份脚本
+
+打开刚复制的脚本，修改第 3-6 行的配置：
 
 ```powershell
 # ==================== 配置区域 ====================
 # 1. OpenClaw 源目录（根据你的系统修改）
 $sourceDir = "C:\Users\你的用户名\.openclaw"
 
-# 2. 备份目标目录（你的 oneyemo 路径）
-$backupDir = "C:\oneyoemo\openclaw-backup"  # 修改为你的路径
+# 2. 备份目标目录（相对路径，从 oneyemo 根目录开始）
+# 大师兄: ..\dashixiong-workspace\openclaw-backup
+# 师傅: ..\shifu-workspace\openclaw-backup
+# 小师妹: ..\xiaomeimei-workspace\openclaw-backup
+$backupDir = "..\dashixiong-workspace\openclaw-backup"
 # ==================================================
 ```
 
-**示例配置：**
-
-**小师妹（C:\oneyoemo）：**
-```powershell
-$sourceDir = "C:\Users\xiaomeimei\.openclaw"
-$backupDir = "C:\oneyoemo\openclaw-backup"
-```
-
-**师傅（E:\oneyoemo）：**
-```powershell
-$sourceDir = "C:\Users\shifu\.openclaw"
-$backupDir = "E:\oneyoemo\openclaw-backup"
-```
+**配置示例：**
 
 **大师兄（E:\Workspace\oneyoemo）：**
 ```powershell
 $sourceDir = "C:\Users\bambo\.openclaw"
-$backupDir = "E:\Workspace\oneyoemo\openclaw-backup"
+$backupDir = "..\dashixiong-workspace\openclaw-backup"
 ```
 
-## 模板脚本说明
+**师傅（假设在 E:\oneyoemo）：**
+```powershell
+$sourceDir = "C:\Users\shifu\.openclaw"
+$backupDir = "..\shifu-workspace\openclaw-backup"
+```
 
-| 文件 | 说明 |
-|------|------|
-| `backup-openclaw.ps1` | 主备份脚本模板（复制到你的oneyoemo目录后修改配置） |
-| `.gitignore` | Git忽略规则（复制到你的备份目录） |
-| `CONFIG_GUIDE.md` | 详细配置指南 |
+**小师妹（假设在 C:\oneyoemo）：**
+```powershell
+$sourceDir = "C:\Users\xiaomeimei\.openclaw"
+$backupDir = "C:\oneyoemo\shifu-workspace\openclaw-backup"
+```
 
-## 使用流程
+### 第三步：将脚本移动到你的工作区
+
+```powershell
+# 将脚本移动到你的工作区
+Move-Item "backup-scripts\backup-openclaw.ps1" "..\dashixiong-workspace\"
+```
+
+这样备份脚本就在你的工作区内，方便管理！
+
+### 第四步：运行备份
+
+```powershell
+# 进入你的工作区
+cd ..\dashixiong-workspace
+
+# 运行备份
+.\backup-openclaw.ps1
+```
+
+## 使用说明
 
 ### 日常备份
 
+在工作区内运行备份脚本：
 ```powershell
-# 进入你的 oneyemo 目录
-cd C:\oneyoemo  # 或 E:\Workspace\oneyoemo 等
-
-# 运行备份
-.\backup-scripts\backup-openclaw.ps1
+# 在 dashixiong-workspace/ 目录下
+.\backup-openclaw.ps1
 ```
 
-### 自动备份（可选）
+### Git 提交
 
-创建 Windows 计划任务：
-1. 打开"任务计划程序"
-2. 创建基本任务
-3. 触发器：每天指定时间
-4. 操作：启动程序
-   - 程序：`powershell.exe`
-   - 参数：`-ExecutionPolicy Bypass -File "C:\oneyoemo\backup-scripts\backup-openclaw.ps1"`
-
-### 提交到 Git
-
-每个人的备份目录不同，所以各自提交：
+每个人在自己的工作区提交：
 
 ```bash
-# 小师妹
-cd C:\oneyoemo
-git add openclaw-backup/
-git commit -m "backup: OpenClaw data sync"
-git push
+cd E:\oneyoemo  # 或你的本地路径
 
-# 师傅
-cd E:\Workspace\oneyoemo
-git add openclaw-backup/
+# 大师兄提交
+git add dashixiong-workspace/openclaw-backup/
 git commit -m "backup: OpenClaw data sync"
-git push
 
-# 大师兄
-cd E:\Workspace\oneyoemo
-git add openclaw-backup/
-git commit -m "backup: OpenClaw data sync"
+# 推送
 git push
 ```
 
-## 目录结构示例
+### 自动备份（定时任务）
 
-```
-C:\oneyoemo/                    # 小师妹的 oneyemo
-├── backup-scripts/
-│   ├── backup-openclaw.ps1   # 她的个人备份脚本
-│   └── .gitignore
-└── openclaw-backup/         # 她的备份文件
-
-E:\oneyoemo/                    # 师傅的 oneyemo
-├── backup-scripts/
-│   ├── backup-openclaw.ps1   # 他的个人备份脚本
-│   └── .gitignore
-└── openclaw-backup/         # 他的备份文件
-
-E:\Workspace\oneyoemo/         # 大师兄的 oneyemo
-├── backup-scripts/
-│   ├── backup-openclaw.ps1   # 我的个人备份脚本
-│   └── .gitignore
-└── openclaw-backup/         # 我的备份文件
-```
-
-## 优势
-
-1. **完全独立**：每个人的脚本互不干扰
-2. **灵活配置**：可以根据自己的路径调整
-3. **便于维护**：不需要协调修改同一个文件
-4. **安全可靠**：配置错误不会影响其他人
+创建 Windows 任务计划程序：
+- 程序：`powershell.exe`
+- 参数：`-ExecutionPolicy Bypass -File "E:\oneyoemo\dashixiong-workspace\backup-openclaw.ps1"`
+- 触发器：每天定时执行
 
 ## 常见问题
 
 ### Q: 如何找到我的 .openclaw 目录？
 
-A: 打开 PowerShell，运行：
+A: PowerShell 运行：
 ```powershell
-$env:USERPROFILE\.openclaw
-# 或者
+echo $env:USERPROFILE\.openclaw
+
+# 或
 echo ~\.openclaw
+
+# 或
+dir $env:USERPROFILE\.openclaw
 ```
+
+### Q: 如何找到我的 oneyemo 目录？
+
+A: 克隆仓库后查看本地路径：
+```bash
+pwd
+```
+
+可能在：
+- `E:\oneyoemo\`
+- `C:\oneyoemo\`
+- `D:\oneyoemo\`
+- 或其他盘
 
 ### Q: 不确定自己的 oneyemo 路径怎么办？
 
-A: 问师傅或大师兄，或者：
-- 检查 Git 克隆位置
-- 检查项目文件夹位置
+A: 
+1. 在 oneyomo 目录中运行 `git remote -v` 查看远程仓库
+2. 查看路径确认是否正确
+3. 在团队群里询问其他成员
 
-### Q: 可以把备份脚本放到其他位置吗？
+### Q: 如何确认备份成功？
 
-A: 可以！只要正确配置 `$sourceDir` 和 `$backupDir` 即可，脚本可以放在任何位置。
+A: 运行备份脚本后会显示：
+- "备份完成！"
+- 备份文件数
+- 下一步操作指引
 
-### Q: 多个电脑都需要备份怎么办？
+### Q: 可以修改其他人的工作区吗？
 
-A: 在每台电脑上复制脚本并配置路径即可，可以使用相同的 git 仓库。
+A: 不建议！除非对方明确要求，否则只修改自己的内容。
 
-### Q: 团队如何同步备份状态？
+### Q: 如何恢复特定版本的备份？
 
-A: 定期在团队群里分享备份成功的截图或日志，互相确认是否正常。
+A: 使用 Git 回退：
+```bash
+# 查看历史
+git log --oneline
+
+# 恢复到某个版本
+git checkout <commit-hash> -- (工作区)/
+```
+
+### Q: 如何创建自己的工作区？
+
+A: 在 oneyemo 根目录下：
+```bash
+# 大师兄工作区已存在
+# 师傅创建
+mkdir shifu-workspace
+
+# 小师妹创建
+mkdir xiaomeimei-workspace
+```
+
+## 高级技巧
+
+### 使用环境变量自动获取用户名
+
+在脚本中使用：
+```powershell
+# 自动获取当前用户名
+$username = $env:USERNAME
+$sourceDir = "C:\Users\$username\.openclaw"
+```
+
+### 添加备份日志
+
+在脚本最后添加：
+```powershell
+# 记录备份时间
+$timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+"$timestamp - Backup completed" | Out-File "backup.log" -Append
+```
+
+### 监控备份文件变化
+
+定期检查备份目录大小：
+```powershell
+# 查看备份目录大小
+$backupSize = (Get-ChildItem "..\dashixiong-workspace\openclaw-backup" -Recurse -File | Measure-Object -Property Length).Sum
+Write-Host "Backup size: $([math]::Round($backupSize / 1MB, 2)) MB"
+```
+
+## 工作区管理最佳实践
+
+1. **保持目录整洁**
+   - 定期清理临时文件
+   - 使用有意义的文件夹命名
+   - 避免过深的嵌套
+
+2. **使用 .gitignore**
+   - 在每个工作区创建 .gitignore
+   - 忽略构建输出、缓存、临时文件
+
+3. **定期同步**
+   - 每天至少提交一次
+   - 重要节点及时推送
+   - 查看状态确认没有遗漏
+
+4. **分支开发**
+   - 新功能使用新分支
+   - 测试通过后再合并到主分支
+   - 使用清晰的分支名
+
+5. **文档维护**
+   - 重要决策更新到 docs/
+   - 会议记录完整
+   - 计划和任务同步
+
+## 备份内容说明
+
+完整备份 OpenClaw 配置：
+
+### 备份的目录
+
+- `workspace/` - 身份信息、用户信息、灵魂、工具
+- `agents/main/sessions/` - 对话历史
+- `identity/` - 设备认证
+- `cron/` - 定时任务
+- `devices/` - 配对设备
+- `canvas/` - Canvas 相关数据
+- `openclaw.json` - 主配置文件
+
+### 排除的文件
+
+自动排除以减小备份体积：
+
+- `node_modules/` - npm 依赖（可通过 `npm install` 恢复）
+- `*.lock` - 临时锁定文件
+- `*.log` - 日志文件
+- `*.db`、`*.sqlite` - 数据库文件
+- `*.tmp`、`*.temp` - 临时文件
+- `extensions/` - 扩展包（可重新安装）
 
 ## 迁移到新电脑
 
-1. **克隆你的 oneyemo 仓库**到新电脑
-2. **复制你的备份脚本**（如果在新电脑上没有）
-3. **配置路径**（如果用户名或路径不同）
+### 简单三步
+
+1. **克隆 oneyemo 仓库**到新电脑
+2. **复制你的工作区**（包含备份脚本）到新电脑
+3. **配置路径**（如果用户名或系统不同）
 4. **恢复备份**：
    ```powershell
-   Copy-Item -Recurse "openclaw-backup\*" "~\.openclaw"
+   # 将备份目录的内容复制到 .openclaw
+   Copy-Item -Recurse "你的工作区\openclaw-backup\*" "~\.openclaw"
    ```
 
-## 最佳实践
+### 恢复依赖（如果需要）
 
-1. **第一次配置后测试**：运行脚本确认备份成功
-2. **定期备份**：建议每天备份一次
-3. **检查备份大小**：如果异常增长，检查是否有大文件未被排除
-4. **定期提交到Git**：防止本地数据丢失
-5. **团队协作**：遇到问题及时在群里沟通
+```powershell
+cd ~/.openclaw/extensions
+npm install
+```
+
+## 团队协作提示
+
+- **沟通及时**：遇到问题在团队群里沟通
+- **定期同步**：重要更新及时推送代码
+- **互相帮助**：成员遇到困难时互相支持
+- **文档维护**：重要决策及时更新到 docs/
+- **备份习惯**：每天备份一次 OpenClaw 数据
 
 ## 技巧
 
@@ -217,28 +330,30 @@ dir $env:USERPROFILE\.openclaw
 
 ### 批处理修改用户名
 
-如果不确定用户名，在脚本中使用变量：
-
+如果不确定用户名，在脚本中使用：
 ```powershell
 # 自动获取当前用户名
 $username = $env:USERNAME
 $sourceDir = "C:\Users\$username\.openclaw"
 ```
 
-### 监控备份文件变化
-
-可以在脚本最后添加：
+### 批量创建工作区
 
 ```powershell
-# 记录备份时间
-$timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-"$timestamp - Backup completed" | Out-File "backup.log" -Append
+# 创建师傅和小师妹的工作区
+mkdir shifu-workspace
+mkdir xiaomeimei-workspace
+
+# 创建各自的备份目录
+mkdir shifu-workspace\openclaw-backup
+mkdir xiaomeimei-workspace\openclaw-backup
 ```
 
 ## 更新日志
 
 ### 2026-01-31
-- 重新设计为多用户独立版本
-- 每个人在自己的 oneyemo 目录创建备份脚本
-- 避免共享 skill 文件的配置冲突
-- 提供灵活的配置选项
+- 重新设计为团队公共仓库模式
+- 每个成员有独立工作区
+- 备份脚本在工作区内运行
+- 添加完整的工作区管理指南
+- 增加备份和恢复技巧

@@ -1,20 +1,20 @@
 # OpenClaw Backup Script Template
-# 复制此文件到你的 oneyemo 目录后修改配置
+# 复制此文件到 oneyemo\backup-scripts\ 目录后修改配置
 
 # ==================== 配置区域 ====================
-# 请根据你的实际情况修改以下两项配置
+# 根据你的身份修改以下配置
 
-# 1. OpenClaw 源目录（通常在每个用户的用户目录下）
+# 1. OpenClaw 源目录（每个人的可能不同）
 # 大师兄: C:\Users\bambo\.openclaw
 # 师傅: C:\Users\shifu\.openclaw
 # 小师妹: C:\Users\xiaomeimei\.openclaw
-$sourceDir = "C:\Users\你的用户名\.openclaw"
+$sourceDir = "C:\Users\bambo\.openclaw"
 
-# 2. 备份目标目录（你的 oneyemo 工作区路径）
-# 小师妹（C盘）: C:\oneyoemo\openclaw-backup
-# 师傅: E:\Workspace\oneyoemo\openclaw-backup
-# 大师兄: E:\Workspace\oneyoemo\dashixiong-workspace\openclaw-backup
-$backupDir = "C:\oneyoemo\openclaw-backup"
+# 2. 备份目标目录（相对路径，从 oneyemo 根目录开始）
+# 大师兄: dashixiong-workspace\openclaw-backup
+# 师傅: shifu-workspace\openclaw-backup
+# 小师妹: xiaomeimei-workspace\openclaw-backup
+$backupDir = "..\dashixiong-workspace\openclaw-backup"
 
 # ==================================================
 
@@ -70,21 +70,21 @@ Write-Host ""
 
 # 统计信息
 $fileCount = (Get-ChildItem $backupDir -Recurse -File | Measure-Object).Count
-$backupSize = (Get-ChildItem $backupDir -Recurse -File | Measure-Object -Property Length).Sum
-
 Write-Host "备份文件数: $fileCount" -ForegroundColor Cyan
 
-if ($backupSize -gt 0) {
+if ($fileCount -gt 0) {
+    $backupSize = (Get-ChildItem $backupDir -Recurse -File | Measure-Object -Property Length).Sum
     $sizeMB = [math]::Round($backupSize / 1MB, 2)
     Write-Host "备份大小: $sizeMB MB" -ForegroundColor Cyan
 }
 
 Write-Host ""
 Write-Host "下一步操作：" -ForegroundColor Yellow
-Write-Host "1. 提交到 Git：" -ForegroundColor White
-Write-Host "   cd C:\oneyoemo          # 或 E:\oneyoemo、E:\Workspace\oneyoemo" -ForegroundColor Gray
+Write-Host "1. 进入你的工作区目录：" -ForegroundColor White
+Write-Host "   cd ..\dashixiong-workspace       # 或 shifu-workspace、xiaomeimei-workspace" -ForegroundColor Gray
+Write-Host "2. 添加到 Git：" -ForegroundColor White
 Write-Host "   git add openclaw-backup/" -ForegroundColor Gray
+Write-Host "3. 提交到 Git：" -ForegroundColor White
 Write-Host "   git commit -m 'backup: OpenClaw data sync'" -ForegroundColor Gray
+Write-Host "4. 推送到远程：" -ForegroundColor White
 Write-Host "   git push" -ForegroundColor Gray
-Write-Host ""
-Write-Host "2. 或使用定时任务自动备份" -ForegroundColor White
