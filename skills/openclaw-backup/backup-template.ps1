@@ -51,6 +51,7 @@ Write-Host "已排除：node_modules、.lock、.log、数据库等文件" -Foreg
 # 使用 robocopy 快速复制并排除不需要的文件
 robocopy $sourceDir $backupDir /E `
     /XD node_modules `
+    /XD .git `
     /XF *.lock `
     /XF *.log `
     /XF *.db `
@@ -58,8 +59,6 @@ robocopy $sourceDir $backupDir /E `
     /XF *.sqlite3 `
     /XF *.tmp `
     /XF *.temp `
-    /XF package-lock.json `
-    /XF yarn.lock `
     /NJH /NJS /NFL /NDL /NC /NS
 
 Write-Host ""
