@@ -24,7 +24,7 @@ if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 # 4. Build Core & Scripts
 Write-Host "`n[4/5] Building Core & Running Scripts..."
-pnpm exec tsc -p tsconfig.json
+pnpm exec tsc -p tsconfig.json --noEmit false
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 node --import tsx scripts/canvas-a2ui-copy.ts
 node --import tsx scripts/copy-hook-metadata.ts
