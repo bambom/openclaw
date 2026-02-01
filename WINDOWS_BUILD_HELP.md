@@ -139,6 +139,13 @@ function Sync-Repo ($Path) {
     Write-Host "Syncing $Path"
     Push-Location $Path
     try {
+        # Auto-commit local changes if any
+        if (git status --porcelain) {
+            Write-Host "  -> Committing local changes..."
+            git add .
+            git commit -m "Auto-commit before sync"
+        }
+
         $remotes = git remote
         if ($remotes -contains "upstream") {
             git fetch upstream
