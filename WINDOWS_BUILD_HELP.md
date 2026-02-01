@@ -120,114 +120,95 @@ Write-Host "`nBuild Complete!" -ForegroundColor Green
 
 如果你需要同时开发或使用 `openclaw-china` 扩展，并希望每次构建时自动同步上游代码，可以使用以下的高级构建流程。
 
-### 目录结构假设
-
-本指南假设你的目录结构如下（平级目录）：
-- `C:\Workspace\openclaw` (当前项目)
-- `C:\Workspace\openclaw-china` (中国区插件项目)
-
 ### 自动化同步与构建脚本 (build-full.ps1)
 
-你可以创建一个名为 `build-full.ps1` 的新脚本，它会自动执行：**Git 同步 -> 编译插件库 -> 链接插件 -> 编译主程序**。
+你可以运行 `build-full.ps1`，它会自动执行：**Git 同步 -> 复制插件 -> 转换依赖 -> 自动 pnpm install -> 编译主程序**。
+
+```powershell
+# build-full.ps1 内容见下文
+```
 
 ```powershell
 # build-full.ps1
 
-$WorkspaceRoot = ".."
-$ChinaRepoPath = Join-Path $WorkspaceRoot "openclaw-china"
-$MainRepoPath = Get-Location
+$ChinaRepoPath = "C:\Workspace\openclaw-china"
+$MainRepoPath = "C:\Workspace\openclaw"
 
-# 定义 Git 同步函数
 function Sync-Repo ($Path) {
-    Write-Host "`n=== Syncing repository at $Path ===" -ForegroundColor Cyan
+    if (-not (Test-Path $Path)) { return }
+    Write-Host "Syncing $Path"
     Push-Location $Path
     try {
-        # 1. 尝试获取 upstream (源库) 更新
         $remotes = git remote
         if ($remotes -contains "upstream") {
-            Write-Host "Fetching and Rebasing from upstream..."
             git fetch upstream
-            # 使用 rebase 保持线性历史，不产生 merge commit
             git rebase upstream/main
-            
-            # 同步更新到自己的 fork 仓库 (origin)
-            Write-Host "Pushing clean history to origin (fork)..."
             git push origin main --force-with-lease
         } else {
-            Write-Host "No 'upstream' remote found. Pulling from 'origin'..." -ForegroundColor Yellow
             git pull
         }
     } catch {
-        Write-Host "Git sync failed for $Path. Continuing..." -ForegroundColor Red
+        Write-Host "Git sync failed for $Path"
     }
     Pop-Location
 }
 
-# 1. 同步 OpenClaw 主库
+# 1. Sync
 Sync-Repo $MainRepoPath
+Sync-Repo $ChinaRepoPath
 
-# 2. 处理 OpenClaw China
+# 2. Copy and Transform
 if (Test-Path $ChinaRepoPath) {
-    # 2.1 同步 OpenClaw China
-    Sync-Repo $ChinaRepoPath
+    Write-Host "Integrating Extensions..."
+    
+    $tasks = @(
+        @{ S = "packages\shared"; D = "packages\openclaw-china-shared" },
+        @{ S = "extensions\dingtalk"; D = "extensions\dingtalk" },
+        @{ S = "extensions\feishu"; D = "extensions\feishu" },
+        @{ S = "extensions\wecom"; D = "extensions\wecom" }
+    )
 
-    # 2.2 编译 OpenClaw China
-    Write-Host "`n=== Building OpenClaw China ===" -ForegroundColor Cyan
-    Push-Location $ChinaRepoPath
-    # 确保依赖已安装
-    pnpm install
-    # 编译
-    pnpm build
-    if ($LASTEXITCODE -ne 0) { 
-        Write-Error "OpenClaw China build failed!"
-        Pop-Location
-        exit 1 
+    foreach ($t in $tasks) {
+        $src = Join-Path $ChinaRepoPath $t.S
+        $dst = Join-Path $MainRepoPath $t.D
+
+        if (Test-Path $src) {
+            Write-Host "Copying $src to $dst"
+            if (Test-Path $dst) { Remove-Item -Path $dst -Recurse -Force }
+            
+            $parent = Split-Path $dst
+            if (-not (Test-Path $parent)) { New-Item -ItemType Directory -Path $parent -Force | Out-Null }
+            
+            Copy-Item -Path $src -Destination $dst -Recurse -Force
+
+            $pkg = Join-Path $dst "package.json"
+            if (Test-Path $pkg) {
+                Write-Host "Updating $pkg"
+                $enc = New-Object System.Text.UTF8Encoding($false)
+                $txt = [IO.File]::ReadAllText($pkg, $enc)
+                $txt = $txt -replace '"@openclaw-china/shared":\s*".*?"', '"@openclaw-china/shared": "workspace:*"'
+                $txt = $txt -replace '"openclaw":\s*".*?"', '"openclaw": "workspace:*"'
+                [IO.File]::WriteAllText($pkg, $txt, $enc)
+            }
+        }
     }
-    Pop-Location
-
-    # 2.3 创建链接 (Junction)
-    # 将 unified package (packages/channels) 链接到 extensions 目录
-    $ExtensionTarget = Join-Path $MainRepoPath "extensions\openclaw-china-channels"
-    $ExtensionSource = Join-Path $ChinaRepoPath "packages\channels"
-
-    if (-not (Test-Path $ExtensionTarget)) {
-        Write-Host "`n=== Linking OpenClaw China extensions ===" -ForegroundColor Cyan
-        New-Item -ItemType Junction -Path $ExtensionTarget -Target $ExtensionSource | Out-Null
-        Write-Host "Linked $ExtensionSource to $ExtensionTarget"
-    }
-} else {
-    Write-Warning "OpenClaw China repository not found at $ChinaRepoPath. Skipping integration..."
 }
 
-# 3. 执行标准构建
-Write-Host "`n=== Starting Main Build ===" -ForegroundColor Cyan
+# 3. TSConfig
+$tsbase = Join-Path $ChinaRepoPath "tsconfig.base.json"
+if (Test-Path $tsbase) { Copy-Item -Path $tsbase -Destination (Join-Path $MainRepoPath "tsconfig.base.json") -Force }
+
+# 4. Build
+Write-Host "Starting Build..."
+Push-Location $MainRepoPath
 if (Test-Path ".\build-windows.ps1") {
-    ./build-windows.ps1
+    .\build-windows.ps1
 } else {
-    # 如果没有 build-windows.ps1，则直接运行 pnpm build
+    pnpm install
     pnpm build
 }
-```
-
-### 4. 启用中国区插件
-
-构建完成后，你需要手动启用这些插件。在 `openclaw` 根目录下运行：
-
-```bash
-# 1. 启用统一渠道插件入口
-openclaw config set plugins.entries.channels '{ "enabled": true }' --json
-
-# 2. 配置并启用具体的渠道（以钉钉为例）
-openclaw config set channels.dingtalk '{
-  "enabled": true,
-  "clientId": "your-client-id",
-  "clientSecret": "your-client-secret",
-  "enableAICard": true
-}' --json
-```
+Pop-Location```
 
 ### 提示
-- **线性历史**: 脚本使用 `git rebase` 而不是 `git merge`，这会确保你的 Fork 仓库保持与官方源库完全一致的线性提交记录，不会产生额外的 "Merge branch" 提交。
-- **首次设置 upstream**: 请确保在两个仓库目录下分别运行过以下命令：
-  - `openclaw`: `git remote add upstream https://github.com/openclaw/openclaw.git`
-  - `openclaw-china`: `git remote add upstream https://github.com/BytePioneer-AI/moltbot-china.git`
+- **线性历史**: 脚本使用 `git rebase` 而不是 `git merge`。
+- **依赖同步**: 脚本会在复制完插件后，自动在根目录运行 `pnpm install`。
