@@ -8,16 +8,28 @@ import process from "node:process";
 // Configure global fetch proxy if environment variables are set
 const proxyUrl = process.env.HTTPS_PROXY || process.env.HTTP_PROXY;
 if (proxyUrl) {
-  try {
-    const proxyAgent = new ProxyAgent({
-      uri: proxyUrl,
-      connect: {
-        rejectUnauthorized: process.env.NODE_TLS_REJECT_UNAUTHORIZED !== "0",
-      },
-    });
-    setGlobalDispatcher(proxyAgent);
-  } catch {
-    // Silently ignore proxy initialization errors to avoid crashing on startup
+  // Enforce proxy on standard environment variables for other libraries
+  process.env.HTTPS_PROXY = proxyUrl;
+  process.env.HTTP_PROXY = proxyUrl;
+
+  // Set default NO_PROXY to exclude domestic services and local addresses
+  if (!process.env.NO_PROXY) {
+    process.env.NO_PROXY = "localhost,127.0.0.1,::1,.feishu.cn,.larksuite.com";
+  }
+
+  // Only use undici ProxyAgent for http/https, as it doesn't support socks5://
+  if (proxyUrl.startsWith("http:") || proxyUrl.startsWith("https:")) {
+    try {
+      const proxyAgent = new ProxyAgent({
+        uri: proxyUrl,
+        connect: {
+          rejectUnauthorized: process.env.NODE_TLS_REJECT_UNAUTHORIZED !== "0",
+        },
+      });
+      setGlobalDispatcher(proxyAgent);
+    } catch {
+      // Silently ignore proxy initialization errors to avoid crashing on startup
+    }
   }
 }
 
