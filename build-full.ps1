@@ -1,7 +1,7 @@
 # build-full.ps1
 
-$ChinaRepoPath = "C:\Workspace\openclaw-china"
-$MainRepoPath = "C:\Workspace\openclaw"
+$MainRepoPath = $PSScriptRoot
+$ChinaRepoPath = Join-Path (Split-Path $MainRepoPath -Parent) "openclaw-china"
 
 function Sync-Repo ($Path) {
     if (-not (Test-Path $Path)) { return }

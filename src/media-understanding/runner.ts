@@ -222,46 +222,19 @@ function extractGeminiResponse(raw: string): string | null {
 }
 
 function extractSherpaOnnxText(raw: string): string | null {
-  const tryParse = (value: string): string | null => {
-    const trimmed = value.trim();
-    if (!trimmed) {
-      return null;
-    }
-    const head = trimmed[0];
-    if (head !== "{" && head !== '"') {
-      return null;
-    }
-    try {
-      const parsed = JSON.parse(trimmed) as unknown;
-      if (typeof parsed === "string") {
-        return tryParse(parsed);
-      }
-      if (parsed && typeof parsed === "object") {
-        const text = (parsed as { text?: unknown }).text;
-        if (typeof text === "string" && text.trim()) {
-          return text.trim();
-        }
-      }
-    } catch {}
-    return null;
-  };
-
-  const direct = tryParse(raw);
-  if (direct) {
-    return direct;
-  }
-
-  const lines = raw
-    .split("\n")
-    .map((line) => line.trim())
-    .filter(Boolean);
-  for (let i = lines.length - 1; i >= 0; i -= 1) {
-    const parsed = tryParse(lines[i] ?? "");
-    if (parsed) {
-      return parsed;
-    }
-  }
   return null;
+}
+
+function getGeminiEnv(): NodeJS.ProcessEnv {
+  const env = { ...process.env };
+  if (process.env.OPENCLAW_GOOGLE_PROXY) {
+    env.HTTPS_PROXY = process.env.OPENCLAW_GOOGLE_PROXY;
+    env.HTTP_PROXY = process.env.OPENCLAW_GOOGLE_PROXY;
+  }
+  if (process.env.NODE_TLS_REJECT_UNAUTHORIZED) {
+    env.NODE_TLS_REJECT_UNAUTHORIZED = process.env.NODE_TLS_REJECT_UNAUTHORIZED;
+  }
+  return env;
 }
 
 async function probeGeminiCli(): Promise<boolean> {
@@ -276,6 +249,7 @@ async function probeGeminiCli(): Promise<boolean> {
     try {
       const { stdout } = await runExec("gemini", ["--output-format", "json", "ok"], {
         timeoutMs: 8000,
+        env: getGeminiEnv(),
       });
       return Boolean(extractGeminiResponse(stdout) ?? stdout.toLowerCase().includes("ok"));
     } catch {
@@ -1042,9 +1016,11 @@ async function runCliEntry(params: {
     if (shouldLogVerbose()) {
       logVerbose(`Media understanding via CLI: ${argv.join(" ")}`);
     }
+    const env = command === "gemini" ? getGeminiEnv() : undefined;
     const { stdout } = await runExec(argv[0], argv.slice(1), {
       timeoutMs,
       maxBuffer: CLI_OUTPUT_MAX_BUFFER,
+      env,
     });
     const resolved = await resolveCliOutput({
       command,

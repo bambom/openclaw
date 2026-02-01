@@ -2,6 +2,32 @@ import { createHash, randomBytes } from "node:crypto";
 import { existsSync, readFileSync, readdirSync, realpathSync } from "node:fs";
 import { createServer } from "node:http";
 import { delimiter, dirname, join } from "node:path";
+import { ProxyAgent, fetch as undiciFetch } from "undici";
+
+let googleProxyAgent: ProxyAgent | undefined;
+
+// Use a dedicated proxy variable first to avoid affecting other plugins like Feishu
+const proxyUrl = process.env.OPENCLAW_GOOGLE_PROXY || process.env.HTTPS_PROXY || process.env.HTTP_PROXY;
+if (proxyUrl) {
+  try {
+    googleProxyAgent = new ProxyAgent({
+      uri: proxyUrl,
+      connect: {
+        rejectUnauthorized: process.env.NODE_TLS_REJECT_UNAUTHORIZED !== "0",
+      },
+    });
+  } catch {
+    // ignore
+  }
+}
+
+// Helper fetch that uses the Google proxy if available
+const googleFetch = async (url: string, init?: RequestInit) => {
+  return undiciFetch(url, {
+    ...init,
+    dispatcher: googleProxyAgent,
+  } as any);
+};
 
 const CLIENT_ID_KEYS = ["OPENCLAW_GEMINI_OAUTH_CLIENT_ID", "GEMINI_CLI_OAUTH_CLIENT_ID"];
 const CLIENT_SECRET_KEYS = [
@@ -406,7 +432,7 @@ async function exchangeCodeForTokens(
     body.set("client_secret", clientSecret);
   }
 
-  const response = await fetch(TOKEN_URL, {
+  const response = await googleFetch(TOKEN_URL, {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body,
@@ -442,7 +468,7 @@ async function exchangeCodeForTokens(
 
 async function getUserEmail(accessToken: string): Promise<string | undefined> {
   try {
-    const response = await fetch(USERINFO_URL, {
+    const response = await googleFetch(USERINFO_URL, {
       headers: { Authorization: `Bearer ${accessToken}` },
     });
     if (response.ok) {
@@ -481,7 +507,7 @@ async function discoverProject(accessToken: string): Promise<string> {
   } = {};
 
   try {
-    const response = await fetch(`${CODE_ASSIST_ENDPOINT}/v1internal:loadCodeAssist`, {
+    const response = await googleFetch(`${CODE_ASSIST_ENDPOINT}/v1internal:loadCodeAssist`, {
       method: "POST",
       headers,
       body: JSON.stringify(loadBody),
@@ -541,7 +567,7 @@ async function discoverProject(accessToken: string): Promise<string> {
     (onboardBody.metadata as Record<string, unknown>).duetProject = envProject;
   }
 
-  const onboardResponse = await fetch(`${CODE_ASSIST_ENDPOINT}/v1internal:onboardUser`, {
+  const onboardResponse = await googleFetch(`${CODE_ASSIST_ENDPOINT}/v1internal:onboardUser`, {
     method: "POST",
     headers,
     body: JSON.stringify(onboardBody),
@@ -609,7 +635,7 @@ async function pollOperation(
 ): Promise<{ done?: boolean; response?: { cloudaicompanionProject?: { id?: string } } }> {
   for (let attempt = 0; attempt < 24; attempt += 1) {
     await new Promise((resolve) => setTimeout(resolve, 5000));
-    const response = await fetch(`${CODE_ASSIST_ENDPOINT}/v1internal/${operationName}`, {
+    const response = await googleFetch(`${CODE_ASSIST_ENDPOINT}/v1internal/${operationName}`, {
       headers,
     });
     if (!response.ok) {

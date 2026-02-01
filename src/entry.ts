@@ -1,7 +1,26 @@
 #!/usr/bin/env node
+import "dotenv/config";
+import { ProxyAgent, setGlobalDispatcher } from "undici";
 import { spawn } from "node:child_process";
 import path from "node:path";
 import process from "node:process";
+
+// Configure global fetch proxy if environment variables are set
+const proxyUrl = process.env.HTTPS_PROXY || process.env.HTTP_PROXY;
+if (proxyUrl) {
+  try {
+    const proxyAgent = new ProxyAgent({
+      uri: proxyUrl,
+      connect: {
+        rejectUnauthorized: process.env.NODE_TLS_REJECT_UNAUTHORIZED !== "0",
+      },
+    });
+    setGlobalDispatcher(proxyAgent);
+  } catch {
+    // Silently ignore proxy initialization errors to avoid crashing on startup
+  }
+}
+
 import { applyCliProfileEnv, parseCliProfileArgs } from "./cli/profile.js";
 import { isTruthyEnvValue, normalizeEnv } from "./infra/env.js";
 import { installProcessWarningFilter } from "./infra/warnings.js";
