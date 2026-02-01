@@ -231,4 +231,3 @@ openclaw config set channels.dingtalk '{
 - **首次设置 upstream**: 请确保在两个仓库目录下分别运行过以下命令：
   - `openclaw`: `git remote add upstream https://github.com/openclaw/openclaw.git`
   - `openclaw-china`: `git remote add upstream https://github.com/BytePioneer-AI/moltbot-china.git`
-
